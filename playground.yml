@@ -49,10 +49,6 @@
         file: src=/etc/nginx/sites-available/mysite.conf dest=/etc/nginx/sites-enabled/mysite.conf state=link
         notify: restart nginx
 
-      - name: delete default html directory
-        file: dest=/var/www/html state=absent
-        notify: restart nginx
-
     handlers:
 
       - name: restart nginx
