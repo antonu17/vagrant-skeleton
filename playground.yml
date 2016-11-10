@@ -1,0 +1,60 @@
+---
+  - hosts: all
+    become: yes
+    gather_facts: no
+    tasks:
+
+      - name: install ansible prerequisites
+        script: bootstrap.sh creates=/root/.ansible_bootstrapped
+
+  - hosts: all
+    become: yes
+    tasks:
+
+      - name: install ubuntu repository manager
+        apt: pkg=software-properties-common state=latest
+
+      - name: add custom repositories
+        apt_repository: repo={{item}} state=present
+        with_items:
+          - ppa:nginx/stable
+          - ppa:webupd8team/java
+
+      - name: accept oracle license
+        debconf: name='oracle-java8-installer' question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+
+      - name: install packages
+        apt: pkg={{item}} state=latest update_cache=true cache_valid_time=3600
+        with_items:
+          - mc
+          - vim
+          - git
+          - build-essential
+          - ant
+          - oracle-java8-installer
+          - oracle-java8-set-default
+          - nginx
+          - php-fpm
+          - composer
+
+      - name: disable default nginx site
+        file: dest=/etc/nginx/sites-enabled/default state=absent
+        notify: restart nginx
+
+      - name: install my fancy nginx site
+        copy: src=mysite.conf dest=/etc/nginx/sites-available owner=root group=root mode=0755
+        notify: restart nginx
+
+      - name: enable my fancy nginx site
+        file: src=/etc/nginx/sites-available/mysite.conf dest=/etc/nginx/sites-enabled/mysite.conf state=link
+        notify: restart nginx
+
+      - name: delete default html directory
+        file: dest=/var/www/html state=absent
+        notify: restart nginx
+
+    handlers:
+
+      - name: restart nginx
+        service: name=nginx state=reloaded
+...
